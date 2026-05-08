@@ -46,6 +46,8 @@
     --ds-pink: #ff6b9d;
     --ds-yellow: #fcc419;
     --ds-mint: #66d9a6;
+    --peach: #ffb37c;
+    --sky: #9be8f5;
     --shadow: 6px 6px 0 var(--ink);
     --shadow-lg: 8px 8px 0 var(--ink);
     --shadow-sm: 3px 3px 0 var(--ink);
@@ -201,14 +203,43 @@
   background-size: 100% 100%;
 }
 
-/* Responsive course grid */
-@media (max-width: 980px) {
-  .course-grid {
-    grid-template-columns: repeat(2, 1fr) !important;
+/* Flashcard animations */
+@keyframes flashcard-exit-left {
+  to {
+    transform: rotate(-8deg) translateX(-180%);
+    opacity: 0;
   }
 }
-@media (max-width: 600px) {
-  .course-grid {
+@keyframes flashcard-exit-right {
+  to {
+    transform: rotate(8deg) translateX(180%);
+    opacity: 0;
+  }
+}
+@keyframes flashcard-enter-left {
+  from {
+    transform: rotate(8deg) translateX(60%);
+    opacity: 0;
+  }
+  to {
+    transform: rotate(-1.4deg) translateX(0);
+    opacity: 1;
+  }
+}
+@keyframes flashcard-enter-right {
+  from {
+    transform: rotate(-8deg) translateX(-60%);
+    opacity: 0;
+  }
+  to {
+    transform: rotate(-1.4deg) translateX(0);
+    opacity: 1;
+  }
+}
+
+/* Responsive course grid */
+@media (max-width: 900px) {
+  .summaries-grid {
     grid-template-columns: 1fr !important;
   }
 }

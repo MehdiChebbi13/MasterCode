@@ -1,35 +1,43 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
-import { useCourse } from "@/hooks";
+import { useCourse, useFlashcards, useSummaries } from "@/hooks";
 import { CourseHeader } from "@/components/app/CourseHeader";
-import { CourseTabs } from "@/components/app/CourseTabs";
+import { CourseViewSwitcher } from "@/components/app/CourseViewSwitcher";
+import { FlashcardStudy } from "@/components/app/FlashcardStudy";
+import { SummariesGrid } from "@/components/app/SummariesGrid";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { ServiceError } from "@/types";
 
 export default function CoursePage({ params }: { params: { id: string } }) {
-  const { data: course, isLoading, error } = useCourse(params.id);
+  const { data: course, isLoading: courseLoading, error: courseError } = useCourse(params.id);
+  const { data: flashcards, isLoading: flashcardsLoading } = useFlashcards(params.id);
+  const { data: summaries, isLoading: summariesLoading } = useSummaries(params.id);
 
-  return (
-    <main className="mx-auto max-w-6xl px-4 pb-16 pt-6 sm:px-6">
-      {isLoading && (
-        <div className="space-y-6">
-          <Skeleton className="h-32 w-full rounded-xl" />
-          <Skeleton className="h-9 w-72 rounded-md" />
-          <Skeleton className="h-44 w-full rounded-xl" />
-        </div>
-      )}
+  const [activeTab, setActiveTab] = useState<"flashcards" | "summaries">("flashcards");
 
-      {error && !isLoading && (
+  if (courseLoading) {
+    return (
+      <main style={{ maxWidth: 1280, margin: "0 auto", padding: "36px 40px" }}>
+        <Skeleton className="h-32 w-full rounded-xl mb-6" />
+        <Skeleton className="h-9 w-72 rounded-md" />
+      </main>
+    );
+  }
+
+  if (courseError || !course) {
+    return (
+      <main style={{ maxWidth: 1280, margin: "0 auto", padding: "36px 40px" }}>
         <Card className="border-destructive/50">
           <CardHeader>
             <CardTitle className="text-destructive">
-              {error instanceof ServiceError && error.code === "not_found" ? "Course not found" : "Couldn't load this course"}
+              {courseError instanceof ServiceError && courseError.code === "not_found" ? "Course not found" : "Couldn't load this course"}
             </CardTitle>
             <CardDescription>
-              {error instanceof ServiceError ? error.message : "Unexpected error."}
+              {courseError instanceof ServiceError ? courseError.message : "Unexpected error."}
             </CardDescription>
           </CardHeader>
           <div className="px-6 pb-6">
@@ -38,14 +46,54 @@ export default function CoursePage({ params }: { params: { id: string } }) {
             </Button>
           </div>
         </Card>
-      )}
+      </main>
+    );
+  }
 
-      {course && (
+  return (
+    <>
+      <CourseHeader course={course} />
+      <CourseViewSwitcher
+        onTabChange={setActiveTab}
+        flashcardCount={flashcards?.length ?? 0}
+        summaryCount={summaries?.length ?? 0}
+      />
+
+      {/* FLASHCARDS VIEW */}
+      {activeTab === "flashcards" && (
         <>
-          <CourseHeader course={course} />
-          <CourseTabs courseId={course.id} courseName={course.name} />
+          {flashcardsLoading ? (
+            <div style={{ maxWidth: 1280, margin: "0 auto", padding: "60px 40px" }}>
+              <Skeleton className="h-80 w-full rounded-xl" />
+            </div>
+          ) : flashcards && flashcards.length > 0 ? (
+            <FlashcardStudy flashcards={flashcards} />
+          ) : (
+            <div style={{ maxWidth: 1280, margin: "0 auto", padding: "60px 40px", textAlign: "center" }}>
+              <div style={{ fontSize: 18, color: "var(--ink-soft)", marginBottom: 20 }}>
+                No flashcards yet. Create one to get started!
+              </div>
+              <Button size="sm" className="gap-1.5">
+                + Add flashcard
+              </Button>
+            </div>
+          )}
         </>
       )}
-    </main>
+
+      {/* SUMMARIES VIEW */}
+      {activeTab === "summaries" && (
+        <>
+          {summariesLoading ? (
+            <div style={{ maxWidth: 1280, margin: "0 auto", padding: "60px 40px" }}>
+              <Skeleton className="h-64 w-full rounded-xl mb-6" />
+              <Skeleton className="h-64 w-full rounded-xl" />
+            </div>
+          ) : summaries ? (
+            <SummariesGrid summaries={summaries} />
+          ) : null}
+        </>
+      )}
+    </>
   );
 }
