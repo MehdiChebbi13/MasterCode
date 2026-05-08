@@ -2,9 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ArrowLeft, BookOpen, Code2, Plus } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { ArrowLeft } from "lucide-react";
 import { useUIStore } from "@/store/uiStore";
 import { dataSource } from "@/services";
 import { ThemeToggle } from "./ThemeToggle";
@@ -16,38 +14,116 @@ export function TopNav() {
   const isDetail = pathname?.startsWith("/courses/");
 
   return (
-    <header className="sticky top-0 z-30 border-b border-border/60 bg-background/85 backdrop-blur supports-[backdrop-filter]:bg-background/70">
-      <div className="mx-auto flex h-14 max-w-6xl items-center gap-3 px-4 sm:px-6">
-        {isDetail ? (
-          <Button asChild variant="ghost" size="sm" className="gap-1.5">
-            <Link href="/" aria-label="Back to dashboard">
-              <ArrowLeft className="size-4" />
-              <span className="hidden sm:inline">Back</span>
-            </Link>
-          </Button>
-        ) : null}
+    <header
+      style={{
+        position: "sticky",
+        top: 0,
+        zIndex: 30,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        padding: "18px 40px",
+        borderBottom: "2.5px solid var(--ink)",
+        background: "var(--paper)",
+      }}
+    >
+      {/* Left: logo + badge */}
+      <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+        {isDetail && (
+          <Link
+            href="/"
+            aria-label="Back to dashboard"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+              color: "var(--ink-soft)",
+              fontSize: 13,
+              fontWeight: 600,
+              textDecoration: "none",
+              marginRight: 4,
+            }}
+          >
+            <ArrowLeft size={15} />
+            <span>Back</span>
+          </Link>
+        )}
 
-        <Link href="/" className="flex items-center gap-2 font-semibold tracking-tight">
-          <BookOpen className="size-5 text-primary" />
-          <span>CS Study Hub</span>
+        <Link href="/" style={{ display: "flex", alignItems: "center", gap: 14, textDecoration: "none" }} className="group">
+          {/* Logo mark */}
+          <div
+            style={{
+              width: 44,
+              height: 44,
+              background: "var(--ds-yellow)",
+              border: "2.5px solid var(--ink)",
+              borderRadius: 12,
+              display: "grid",
+              placeItems: "center",
+              boxShadow: "var(--shadow-sm)",
+              transform: "rotate(-4deg)",
+              transition: "transform 0.2s ease",
+              flexShrink: 0,
+            }}
+            className="group-hover:[transform:rotate(4deg)_scale(1.05)]"
+          >
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+              <path d="M3 5 L11 5 Q12 5 12 6 L12 21 Q12 20 11 20 L3 20 Z" stroke="#1a1612" strokeWidth="2.2" strokeLinejoin="round" fill="#fff" />
+              <path d="M21 5 L13 5 Q12 5 12 6 L12 21 Q12 20 13 20 L21 20 Z" stroke="#1a1612" strokeWidth="2.2" strokeLinejoin="round" fill="#fff" />
+            </svg>
+          </div>
+          {/* Logo text */}
+          <span
+            style={{
+              fontFamily: "var(--font-bricolage), serif",
+              fontWeight: 800,
+              fontSize: 22,
+              letterSpacing: "-0.03em",
+              color: "var(--ink)",
+            }}
+          >
+            CS Study{" "}
+            <span style={{ color: "var(--algo-deep)" }}>Hub</span>
+          </span>
         </Link>
 
-        <Badge variant="outline" className="ml-2 hidden font-mono text-[10px] uppercase tracking-wider sm:inline-flex">
-          {dataSource()}
-        </Badge>
+        {/* Data source badge */}
+        <span
+          style={{
+            background: "var(--ds-pink)",
+            color: "var(--ink)",
+            border: "2px solid var(--ink)",
+            borderRadius: 999,
+            fontSize: 11,
+            fontWeight: 700,
+            padding: "4px 10px",
+            letterSpacing: "0.08em",
+            transform: "rotate(6deg)",
+            boxShadow: "2px 2px 0 var(--ink)",
+            display: "inline-block",
+          }}
+        >
+          {dataSource().toUpperCase()}
+        </span>
+      </div>
 
-        <div className="ml-auto flex items-center gap-2">
-          <ThemeToggle />
-          <Button variant="outline" size="sm" onClick={openGlobalSandbox} className="gap-1.5" aria-label="Open sandbox">
-            <Code2 className="size-4" />
-            <span className="hidden sm:inline">Sandbox</span>
-          </Button>
-          <Button size="sm" onClick={openAddCourse} className="gap-1.5">
-            <Plus className="size-4" />
-            <span className="hidden sm:inline">Add course</span>
-            <span className="sm:hidden">Add</span>
-          </Button>
-        </div>
+      {/* Right: actions */}
+      <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+        <ThemeToggle />
+        <button className="neo-btn" onClick={openGlobalSandbox} aria-label="Open sandbox">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="16 18 22 12 16 6" />
+            <polyline points="8 6 2 12 8 18" />
+          </svg>
+          <span className="hidden sm:inline">Sandbox</span>
+        </button>
+        <button className="neo-btn neo-btn-primary" onClick={openAddCourse}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+            <line x1="12" y1="5" x2="12" y2="19" />
+            <line x1="5" y1="12" x2="19" y2="12" />
+          </svg>
+          <span>Add course</span>
+        </button>
       </div>
     </header>
   );
