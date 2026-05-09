@@ -5,10 +5,11 @@ import { useCallback, useEffect, useState } from "react";
 
 type TabValue = "flashcards" | "summaries";
 
-const TABS: { value: TabValue; label: string; icon: string; count?: number }[] = [
-  { value: "flashcards", label: "🃏 Flashcards", icon: "🃏" },
-  { value: "summaries", label: "📖 Summaries", icon: "📖" },
-];
+const TABS: { value: TabValue; label: string; icon: string; count?: number }[] =
+  [
+    { value: "flashcards", label: "🃏 Flashcards", icon: "🃏" },
+    { value: "summaries", label: "📖 Summaries", icon: "📖" },
+  ];
 
 function isTabValue(v: string | null): v is TabValue {
   return v === "flashcards" || v === "summaries";
@@ -28,7 +29,10 @@ export function CourseViewSwitcher({
   const params = useSearchParams();
   const raw = params?.get("tab") ?? null;
   const value: TabValue = isTabValue(raw) ? raw : "flashcards";
+
   const [indicatorStyle, setIndicatorStyle] = useState<React.CSSProperties>({});
+  // 1. ADDED: State to track which tab is currently being hovered
+  const [hoveredTab, setHoveredTab] = useState<TabValue | null>(null);
 
   const setTab = useCallback(
     (next: TabValue) => {
@@ -99,58 +103,78 @@ export function CourseViewSwitcher({
             bottom: 5,
             background: "var(--ink)",
             borderRadius: 9,
-            transition: "left 0.32s cubic-bezier(.5, 1.6, .4, 1), width 0.32s cubic-bezier(.5, 1.6, .4, 1)",
+            transition:
+              "left 0.32s cubic-bezier(.5, 1.6, .4, 1), width 0.32s cubic-bezier(.5, 1.6, .4, 1)",
             zIndex: 0,
             ...indicatorStyle,
           }}
         />
 
         {/* Buttons */}
-        {TABS.map((tab) => (
-          <button
-            key={tab.value}
-            className="seg-btn"
-            onClick={() => setTab(tab.value)}
-            style={{
-              position: "relative",
-              zIndex: 1,
-              background: "transparent",
-              border: "none",
-              fontFamily: "var(--font-dm-sans), sans-serif",
-              fontWeight: 700,
-              fontSize: 14,
-              color: value === tab.value ? "var(--paper)" : "var(--ink)",
-              padding: "9px 18px",
-              borderRadius: 9,
-              cursor: "pointer",
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 8,
-              transition: "color 0.32s ease",
-              whiteSpace: "nowrap",
-            }}
-            data-active={value === tab.value}
-          >
-            {tab.label}
-            <span
+        {TABS.map((tab) => {
+          const isActive = value === tab.value;
+          const isHovered = hoveredTab === tab.value;
+
+          return (
+            <button
+              key={tab.value}
+              // 2. FIXED: Added the 'active' class so updateIndicator can find it
+              className={`seg-btn ${isActive ? "active" : ""}`}
+              onClick={() => setTab(tab.value)}
+              // 3. ADDED: Mouse event handlers for inline hover states
+              onMouseEnter={() => setHoveredTab(tab.value)}
+              onMouseLeave={() => setHoveredTab(null)}
               style={{
-                fontFamily: "var(--font-jetbrains), monospace",
-                fontSize: 11,
+                position: "relative",
+                zIndex: 1,
+                // 4. IMPROVED: Subtle background shift on hover for inactive tabs
+                background: isActive
+                  ? "transparent"
+                  : isHovered
+                    ? "rgba(0, 0, 0, 0.04)"
+                    : "transparent",
+                border: "none",
+                fontFamily: "var(--font-dm-sans), sans-serif",
                 fontWeight: 700,
-                background: value === tab.value ? "rgba(255, 250, 239, 0.18)" : "rgba(26, 22, 18, 0.12)",
-                color: value === tab.value ? "var(--paper)" : "var(--ink)",
-                padding: "2px 7px",
-                borderRadius: 999,
-                transition: "all 0.32s ease",
+                fontSize: 14,
+                // 5. FIXED: Corrected contrast. Active is paper (light), inactive is ink (dark)
+                color: isActive ? "var(--paper)" : "var(--ink)",
+                // 6. IMPROVED: Opacity shift on hover makes it feel tactile
+                opacity: isActive ? 1 : isHovered ? 1 : 0.7,
+                padding: "9px 18px",
+                borderRadius: 9,
+                cursor: "pointer",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 8,
+                transition: "all 0.2s ease",
+                whiteSpace: "nowrap",
               }}
+              data-active={isActive}
             >
-              {counts[tab.value as TabValue]}
-            </span>
-          </button>
-        ))}
+              {tab.label}
+              <span
+                style={{
+                  fontFamily: "var(--font-jetbrains), monospace",
+                  fontSize: 11,
+                  fontWeight: 700,
+                  background: isActive
+                    ? "rgba(255, 250, 239, 0.18)"
+                    : "#32CD32",
+                  color: isActive ? "var(--paper)" : "#ffffff",
+                  padding: "2px 7px",
+                  borderRadius: 999,
+                  transition: "all 0.32s ease",
+                }}
+              >
+                {counts[tab.value as TabValue]}
+              </span>
+            </button>
+          );
+        })}
       </div>
 
-      {/* Keyboard hint */}
+      {/* Keyboard hint (unchanged) */}
       <div
         style={{
           fontSize: 12.5,
@@ -160,13 +184,51 @@ export function CourseViewSwitcher({
           gap: 10,
         }}
       >
-        <kbd style={{ fontFamily: "var(--font-jetbrains), monospace", fontSize: 11, fontWeight: 600, background: "var(--paper)", border: "1.5px solid var(--ink)", borderRadius: 5, padding: "2px 6px", boxShadow: "1.5px 1.5px 0 var(--ink)", color: "var(--ink)" }}>Space</kbd>
+        <kbd
+          style={{
+            fontFamily: "var(--font-jetbrains), monospace",
+            fontSize: 11,
+            fontWeight: 600,
+            background: "var(--paper)",
+            border: "1.5px solid var(--ink)",
+            borderRadius: 5,
+            padding: "2px 6px",
+            boxShadow: "1.5px 1.5px 0 var(--ink)",
+            color: "var(--ink)",
+          }}
+        >
+          Space
+        </kbd>
         flip
-        <kbd style={{ fontFamily: "var(--font-jetbrains), monospace", fontSize: 11, fontWeight: 600, background: "var(--paper)", border: "1.5px solid var(--ink)", borderRadius: 5, padding: "2px 6px", boxShadow: "1.5px 1.5px 0 var(--ink)", color: "var(--ink)" }}>
+        <kbd
+          style={{
+            fontFamily: "var(--font-jetbrains), monospace",
+            fontSize: 11,
+            fontWeight: 600,
+            background: "var(--paper)",
+            border: "1.5px solid var(--ink)",
+            borderRadius: 5,
+            padding: "2px 6px",
+            boxShadow: "1.5px 1.5px 0 var(--ink)",
+            color: "var(--ink)",
+          }}
+        >
           ←→
         </kbd>
         navigate
-        <kbd style={{ fontFamily: "var(--font-jetbrains), monospace", fontSize: 11, fontWeight: 600, background: "var(--paper)", border: "1.5px solid var(--ink)", borderRadius: 5, padding: "2px 6px", boxShadow: "1.5px 1.5px 0 var(--ink)", color: "var(--ink)" }}>
+        <kbd
+          style={{
+            fontFamily: "var(--font-jetbrains), monospace",
+            fontSize: 11,
+            fontWeight: 600,
+            background: "var(--paper)",
+            border: "1.5px solid var(--ink)",
+            borderRadius: 5,
+            padding: "2px 6px",
+            boxShadow: "1.5px 1.5px 0 var(--ink)",
+            color: "var(--ink)",
+          }}
+        >
           Tab
         </kbd>
         switch

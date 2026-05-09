@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { useUIStore } from "@/store/uiStore";
 import { useSandboxState } from "@/hooks";
 import { SandboxFrame, SandboxLoading } from "./SandboxFrame";
-import type { SandboxTemplate } from "@/types";
 
 const GLOBAL_ID = "__global__";
 
@@ -16,7 +15,7 @@ const TEMPLATES: { value: LiveTemplate; label: string }[] = [
   { value: "react-ts", label: "react-ts" },
 ];
 
-function isLiveTemplate(t: SandboxTemplate | undefined): t is LiveTemplate {
+function isLiveTemplate(t: string | undefined): t is LiveTemplate {
   return t === "vanilla-ts" || t === "react-ts";
 }
 

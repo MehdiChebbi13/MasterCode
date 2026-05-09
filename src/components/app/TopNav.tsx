@@ -12,6 +12,7 @@ export function TopNav() {
   const openAddCourse = useUIStore((s) => s.openAddCourse);
   const openGlobalSandbox = useUIStore((s) => s.openGlobalSandbox);
   const isDetail = pathname?.startsWith("/courses/");
+  const isSandbox = pathname === "/sandbox";
 
   return (
     <header
@@ -29,7 +30,7 @@ export function TopNav() {
     >
       {/* Left: logo + badge */}
       <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-        {isDetail && (
+        {(isDetail || isSandbox) && (
           <Link
             href="/"
             aria-label="Back to dashboard"
@@ -49,7 +50,16 @@ export function TopNav() {
           </Link>
         )}
 
-        <Link href="/" style={{ display: "flex", alignItems: "center", gap: 14, textDecoration: "none" }} className="group">
+        <Link
+          href="/"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 14,
+            textDecoration: "none",
+          }}
+          className="group"
+        >
           {/* Logo mark */}
           <div
             style={{
@@ -68,8 +78,20 @@ export function TopNav() {
             className="group-hover:[transform:rotate(4deg)_scale(1.05)]"
           >
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-              <path d="M3 5 L11 5 Q12 5 12 6 L12 21 Q12 20 11 20 L3 20 Z" stroke="#1a1612" strokeWidth="2.2" strokeLinejoin="round" fill="#fff" />
-              <path d="M21 5 L13 5 Q12 5 12 6 L12 21 Q12 20 13 20 L21 20 Z" stroke="#1a1612" strokeWidth="2.2" strokeLinejoin="round" fill="#fff" />
+              <path
+                d="M3 5 L11 5 Q12 5 12 6 L12 21 Q12 20 11 20 L3 20 Z"
+                stroke="#1a1612"
+                strokeWidth="2.2"
+                strokeLinejoin="round"
+                fill="#fff"
+              />
+              <path
+                d="M21 5 L13 5 Q12 5 12 6 L12 21 Q12 20 13 20 L21 20 Z"
+                stroke="#1a1612"
+                strokeWidth="2.2"
+                strokeLinejoin="round"
+                fill="#fff"
+              />
             </svg>
           </div>
           {/* Logo text */}
@@ -82,8 +104,7 @@ export function TopNav() {
               color: "var(--ink)",
             }}
           >
-            CS Study{" "}
-            <span style={{ color: "var(--algo-deep)" }}>Hub</span>
+            Road2 <span style={{ color: "var(--algo-deep)" }}>FISA</span>
           </span>
         </Link>
 
@@ -110,15 +131,40 @@ export function TopNav() {
       {/* Right: actions */}
       <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
         <ThemeToggle />
-        <button className="neo-btn" onClick={openGlobalSandbox} aria-label="Open sandbox">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+        <Link
+          href="/sandbox"
+          className="neo-btn"
+          aria-label="Open sandbox"
+          style={{
+            textDecoration: "none",
+            ...(isSandbox && { background: "var(--ds-mint)", color: "var(--ink)" }),
+          }}
+        >
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
             <polyline points="16 18 22 12 16 6" />
             <polyline points="8 6 2 12 8 18" />
           </svg>
           <span className="hidden sm:inline">Sandbox</span>
-        </button>
+        </Link>
         <button className="neo-btn neo-btn-primary" onClick={openAddCourse}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+          >
             <line x1="12" y1="5" x2="12" y2="19" />
             <line x1="5" y1="12" x2="19" y2="12" />
           </svg>

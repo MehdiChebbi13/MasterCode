@@ -9,7 +9,15 @@ const COLORS = [
   { bg: "var(--sky)", rotate: "0.8deg" },
 ];
 
-export function SummariesGrid({ summaries }: { summaries: Summary[] }) {
+export function SummariesGrid({
+  summaries,
+  courseName = "Course",
+  onOpenFlashcards,
+}: {
+  summaries: Summary[];
+  courseName?: string;
+  onOpenFlashcards?: () => void;
+}) {
   const [reading, setReading] = useState<Summary | null>(null);
 
   if (summaries.length === 0) {
@@ -22,7 +30,9 @@ export function SummariesGrid({ summaries }: { summaries: Summary[] }) {
           textAlign: "center",
         }}
       >
-        <div style={{ fontSize: 18, color: "var(--ink-soft)" }}>No summaries yet. Time to create one!</div>
+        <div style={{ fontSize: 18, color: "var(--ink-soft)" }}>
+          No summaries yet. Time to create one!
+        </div>
       </section>
     );
   }
@@ -59,7 +69,11 @@ export function SummariesGrid({ summaries }: { summaries: Summary[] }) {
               color: "var(--ink)",
             }}
           >
-            The <span style={{ color: "var(--algo-deep)", fontStyle: "italic" }}>long form</span> stuff
+            The{" "}
+            <span style={{ color: "var(--algo-deep)", fontStyle: "italic" }}>
+              long form
+            </span>{" "}
+            stuff
           </h2>
           <div
             style={{
@@ -93,7 +107,8 @@ export function SummariesGrid({ summaries }: { summaries: Summary[] }) {
                   borderRadius: 18,
                   padding: 28,
                   boxShadow: "var(--shadow)",
-                  transition: "transform 0.2s cubic-bezier(.2,.9,.3,1.2), box-shadow 0.2s ease",
+                  transition:
+                    "transform 0.2s cubic-bezier(.2,.9,.3,1.2), box-shadow 0.2s ease",
                   cursor: "pointer",
                   overflow: "hidden",
                   display: "flex",
@@ -117,7 +132,8 @@ export function SummariesGrid({ summaries }: { summaries: Summary[] }) {
                   style={{
                     position: "absolute",
                     inset: 0,
-                    backgroundImage: "radial-gradient(circle at 1px 1px, rgba(26, 22, 18, 0.07) 1px, transparent 0)",
+                    backgroundImage:
+                      "radial-gradient(circle at 1px 1px, rgba(26, 22, 18, 0.07) 1px, transparent 0)",
                     backgroundSize: "14px 14px",
                     pointerEvents: "none",
                     opacity: 0.5,
@@ -181,7 +197,11 @@ export function SummariesGrid({ summaries }: { summaries: Summary[] }) {
                       fontWeight: 600,
                     }}
                   >
-                    {i === 0 ? "Today" : i === 1 ? "Yesterday" : `${i} days ago`}
+                    {i === 0
+                      ? "Today"
+                      : i === 1
+                        ? "Yesterday"
+                        : `${i} days ago`}
                   </span>
                 </div>
 
@@ -216,7 +236,10 @@ export function SummariesGrid({ summaries }: { summaries: Summary[] }) {
                     overflow: "hidden",
                   }}
                 >
-                  {summary.contentMarkdown.substring(0, 150).replace(/[#*_`-]/g, "")}...
+                  {summary.contentMarkdown
+                    .substring(0, 150)
+                    .replace(/[#*_`-]/g, "")}
+                  ...
                 </p>
 
                 {/* Footer */}
@@ -272,7 +295,15 @@ export function SummariesGrid({ summaries }: { summaries: Summary[] }) {
       </section>
 
       {reading && (
-        <SummaryReader summary={reading} open={true} onOpenChange={(open) => !open && setReading(null)} />
+        <SummaryReader
+          summary={reading}
+          open={true}
+          onOpenChange={(open) => !open && setReading(null)}
+          courseName={courseName}
+          allSummaries={summaries}
+          onNavigate={setReading}
+          onOpenFlashcards={() => { setReading(null); onOpenFlashcards?.(); }}
+        />
       )}
     </>
   );
