@@ -39,7 +39,7 @@ export function useGlobalShortcuts() {
       }
       if (e.key === "g" || e.key === "G") {
         e.preventDefault();
-        router.push("/");
+        router.push("/dashboard");
         return;
       }
     };

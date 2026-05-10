@@ -2,10 +2,12 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useCourse, useFlashcards, useSummaries } from "@/hooks";
 import { CourseHeader } from "@/components/app/CourseHeader";
 import { CourseViewSwitcher } from "@/components/app/CourseViewSwitcher";
 import { FlashcardStudy } from "@/components/app/FlashcardStudy";
+import { FlashcardDialog } from "@/components/app/FlashcardDialog";
 import { SummariesGrid } from "@/components/app/SummariesGrid";
 import {
   Card,
@@ -30,9 +32,12 @@ export default function CoursePage({ params }: { params: { id: string } }) {
     params.id,
   );
 
+  const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState<"flashcards" | "summaries">(
-    "flashcards",
+    (searchParams.get("tab") as "flashcards" | "summaries") ?? "flashcards",
   );
+  const initialReadId = searchParams.get("read") ?? undefined;
+  const [flashcardDialogOpen, setFlashcardDialogOpen] = useState(false);
 
   if (courseLoading) {
     return (
@@ -62,7 +67,7 @@ export default function CoursePage({ params }: { params: { id: string } }) {
           </CardHeader>
           <div className="px-6 pb-6">
             <Button asChild variant="outline" size="sm">
-              <Link href="/">Back to dashboard</Link>
+              <Link href="/dashboard">Back to dashboard</Link>
             </Button>
           </div>
         </Card>
@@ -72,6 +77,11 @@ export default function CoursePage({ params }: { params: { id: string } }) {
 
   return (
     <>
+      <FlashcardDialog
+        open={flashcardDialogOpen}
+        onOpenChange={setFlashcardDialogOpen}
+        courseId={params.id}
+      />
       <CourseHeader course={course} />
       <CourseViewSwitcher
         onTabChange={setActiveTab}
@@ -89,7 +99,10 @@ export default function CoursePage({ params }: { params: { id: string } }) {
               <Skeleton className="h-80 w-full rounded-xl" />
             </div>
           ) : flashcards && flashcards.length > 0 ? (
-            <FlashcardStudy flashcards={flashcards} />
+            <FlashcardStudy
+              flashcards={flashcards}
+              onAddFlashcard={() => setFlashcardDialogOpen(true)}
+            />
           ) : (
             <div
               style={{
@@ -108,7 +121,7 @@ export default function CoursePage({ params }: { params: { id: string } }) {
               >
                 No flashcards yet. Create one to get started!
               </div>
-              <Button size="sm" className="gap-1.5">
+              <Button size="sm" className="gap-1.5" onClick={() => setFlashcardDialogOpen(true)}>
                 + Add flashcard
               </Button>
             </div>
@@ -129,7 +142,9 @@ export default function CoursePage({ params }: { params: { id: string } }) {
           ) : summaries ? (
             <SummariesGrid
               summaries={summaries}
+              courseId={params.id}
               courseName={course?.name}
+              initialReadId={initialReadId}
               onOpenFlashcards={() => setActiveTab("flashcards")}
             />
           ) : null}

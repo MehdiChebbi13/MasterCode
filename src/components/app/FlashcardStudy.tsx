@@ -5,6 +5,7 @@ import type { Flashcard } from "@/types";
 
 interface FlashcardStudyProps {
   flashcards: Flashcard[];
+  onAddFlashcard?: () => void;
 }
 
 const STICKERS = [
@@ -16,7 +17,7 @@ const STICKERS = [
   { txt: "💡 LEVEL UP", bg: "var(--ds-yellow)", rot: "-8deg" },
 ];
 
-export function FlashcardStudy({ flashcards }: FlashcardStudyProps) {
+export function FlashcardStudy({ flashcards, onAddFlashcard }: FlashcardStudyProps) {
   const [idx, setIdx] = useState(0);
   const [flipped, setFlipped] = useState(false);
   const [known, setKnown] = useState<Set<string>>(new Set());
@@ -153,36 +154,63 @@ export function FlashcardStudy({ flashcards }: FlashcardStudyProps) {
           </span>
         </div>
 
-        {/* Progress dots */}
-        <div
-          style={{
-            display: "inline-flex",
-            gap: 8,
-            alignItems: "center",
-          }}
-        >
-          {flashcards.map((_, i) => (
+        {/* Progress dots + add button */}
+        <div style={{ display: "inline-flex", gap: 14, alignItems: "center" }}>
+          <div
+            style={{
+              display: "inline-flex",
+              gap: 8,
+              alignItems: "center",
+            }}
+          >
+            {flashcards.map((_, i) => (
+              <button
+                key={i}
+                onClick={() => goTo(i, i > idx ? 1 : -1)}
+                aria-label={`Go to card ${i + 1}`}
+                style={{
+                  width: 14,
+                  height: 14,
+                  border: "2px solid var(--ink)",
+                  background: known.has(flashcards[i].id) ? "var(--ds-mint)" : "var(--paper)",
+                  borderRadius: "50%",
+                  padding: 0,
+                  cursor: "pointer",
+                  transition: "all 0.2s ease",
+                  ...(i === idx && {
+                    background: "var(--algo-deep)",
+                    transform: "scale(1.3)",
+                    boxShadow: "1.5px 1.5px 0 var(--ink)",
+                  }),
+                }}
+              />
+            ))}
+          </div>
+          {onAddFlashcard && (
             <button
-              key={i}
-              onClick={() => goTo(i, i > idx ? 1 : -1)}
-              aria-label={`Go to card ${i + 1}`}
+              onClick={onAddFlashcard}
               style={{
-                width: 14,
-                height: 14,
-                border: "2px solid var(--ink)",
-                background: known.has(flashcards[i].id) ? "var(--ds-mint)" : "var(--paper)",
-                borderRadius: "50%",
-                padding: 0,
-                cursor: "pointer",
-                transition: "all 0.2s ease",
-                ...(i === idx && {
-                  background: "var(--algo-deep)",
-                  transform: "scale(1.3)",
-                  boxShadow: "1.5px 1.5px 0 var(--ink)",
-                }),
+                display: "inline-flex", alignItems: "center", gap: 6,
+                padding: "7px 14px",
+                background: "var(--algo)", color: "var(--ink)",
+                border: "2.5px solid var(--ink)", borderRadius: 10,
+                fontFamily: "var(--font-dm-sans), sans-serif",
+                fontWeight: 700, fontSize: 13, cursor: "pointer",
+                boxShadow: "3px 3px 0 var(--ink)",
+                transition: "transform 0.12s ease, box-shadow 0.12s ease",
               }}
-            />
-          ))}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = "translate(-2px,-2px)";
+                e.currentTarget.style.boxShadow = "5px 5px 0 var(--ink)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = "none";
+                e.currentTarget.style.boxShadow = "3px 3px 0 var(--ink)";
+              }}
+            >
+              <span style={{ fontSize: 16, lineHeight: 1 }}>+</span> Add card
+            </button>
+          )}
         </div>
       </div>
 

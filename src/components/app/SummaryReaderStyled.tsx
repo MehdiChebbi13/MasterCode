@@ -1,12 +1,12 @@
 "use client";
 
 import { useEffect, useRef, useState, useMemo } from "react";
-import { Pencil, Trash2, X } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { ArrowLeft, Home, Pencil, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { Summary } from "@/types";
 import { formatRelativeTime } from "@/lib/format";
 import { ExplainPopover } from "./ExplainPopover";
-import { SummaryEditor } from "./SummaryEditor";
 import { DeleteSummaryConfirm } from "./DeleteSummaryConfirm";
 import "./SummaryReaderStyled.css";
 
@@ -29,7 +29,7 @@ export function SummaryReaderStyled({
   onNavigate,
   onOpenFlashcards,
 }: SummaryReaderStyledProps) {
-  const [editOpen, setEditOpen] = useState(false);
+  const router = useRouter();
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [readPercent, setReadPercent] = useState(0);
   const [activeSection, setActiveSection] = useState<string>("section-0");
@@ -61,14 +61,14 @@ export function SummaryReaderStyled({
     const original = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && !editOpen && !deleteOpen) onOpenChange(false);
+      if (e.key === "Escape" && !deleteOpen) onOpenChange(false);
     };
     window.addEventListener("keydown", onKey);
     return () => {
       document.body.style.overflow = original;
       window.removeEventListener("keydown", onKey);
     };
-  }, [open, editOpen, deleteOpen, onOpenChange]);
+  }, [open, deleteOpen, onOpenChange]);
 
   // Read progress — measured on the fixed wrapper, not window
   useEffect(() => {
@@ -197,6 +197,15 @@ export function SummaryReaderStyled({
         </div>
         <div className="nav-actions">
           <Button
+            variant="outline"
+            size="sm"
+            className="gap-1.5 border-[2.5px] border-black shadow-[3px_3px_0_black] rounded-[10px] hover:translate-y-[-2px] hover:translate-x-[-2px] hover:shadow-[5px_5px_0_black] transition-all"
+            onClick={() => onOpenChange(false)}
+          >
+            <ArrowLeft className="size-3.5" />
+            Back
+          </Button>
+          <Button
             variant="ghost"
             size="icon"
             onClick={() => onOpenChange(false)}
@@ -207,7 +216,10 @@ export function SummaryReaderStyled({
             variant="outline"
             size="sm"
             className="gap-1.5 border-[2.5px] border-black shadow-[3px_3px_0_black] rounded-[10px] hover:translate-y-[-2px] hover:translate-x-[-2px] hover:shadow-[5px_5px_0_black] transition-all"
-            onClick={() => setEditOpen(true)}
+            onClick={() => {
+              onOpenChange(false);
+              router.push(`/courses/${summary.courseId}/summaries/${summary.id}/edit`);
+            }}
           >
             <Pencil className="size-3.5" />
             Edit
@@ -513,16 +525,22 @@ export function SummaryReaderStyled({
         </div>
       </section>
 
+      {/* GO HOME */}
+      <section className="go-home-section">
+        <button
+          type="button"
+          className="go-home-btn"
+          onClick={() => { onOpenChange(false); router.push("/dashboard"); }}
+        >
+          <Home className="size-4" />
+          Go to dashboard
+        </button>
+      </section>
+
       <ExplainPopover
         scopeRef={articleRef}
         mode="summary"
         context={summary.contentMarkdown}
-      />
-      <SummaryEditor
-        open={editOpen}
-        onOpenChange={setEditOpen}
-        courseId={summary.courseId}
-        summary={summary}
       />
       <DeleteSummaryConfirm
         open={deleteOpen}
@@ -630,7 +648,31 @@ function formatMarkdown(md: string): string {
     return `\n\nSR_CODE_BLOCK_${idx}\n\n`;
   });
 
-  // 2. All other markdown transforms
+  // 2. Protect highlight blocks (==text==)
+  const highlights: string[] = [];
+  safe = safe.replace(/^==(.+)==\s*$/gm, (_, text) => {
+    const idx = highlights.length;
+    highlights.push(`<div class="sr-highlight">${text}</div>`);
+    return `\n\nSR_HIGHLIGHT_${idx}\n\n`;
+  });
+
+  // 2.5. Protect dividers (--- / *** / ___ lines)
+  const dividers: string[] = [];
+  safe = safe.replace(/^[-*_]{3,}\s*$/gm, () => {
+    const idx = dividers.length;
+    dividers.push('<hr class="sr-divider" />');
+    return `\n\nSR_DIVIDER_${idx}\n\n`;
+  });
+
+  // 2.6. Protect table blocks
+  const tables: string[] = [];
+  safe = preprocessTables(safe, tables);
+
+  // 3. Group consecutive list items into <ul>/<ol> and protect them.
+  const lists: string[] = [];
+  safe = preprocessLists(safe, lists);
+
+  // 4. All other markdown transforms
   let h2Count = 0;
   let html = safe
     .replace(/^##\s+(.+)$/gm, (_, title) => {
@@ -649,12 +691,99 @@ function formatMarkdown(md: string): string {
 
   html = `<p>${html}</p>`;
 
-  // 3. Restore code panels (they must sit outside <p> tags)
-  blocks.forEach((block, idx) => {
+  // 5. Restore protected blocks (they must sit outside <p> tags)
+  const restore = (token: string, replacement: string) => {
     html = html
-      .replace(`<p>SR_CODE_BLOCK_${idx}</p>`, block)
-      .replace(`SR_CODE_BLOCK_${idx}`, block);
-  });
+      .replace(`<p>${token}</p>`, replacement)
+      .replace(token, replacement);
+  };
+  blocks.forEach((b, i) => restore(`SR_CODE_BLOCK_${i}`, b));
+  highlights.forEach((b, i) => restore(`SR_HIGHLIGHT_${i}`, b));
+  dividers.forEach((b, i) => restore(`SR_DIVIDER_${i}`, b));
+  tables.forEach((b, i) => restore(`SR_TABLE_${i}`, b));
+  lists.forEach((b, i) => restore(`SR_LIST_${i}`, b));
 
   return html;
+}
+
+function preprocessTables(input: string, tables: string[]): string {
+  const lines = input.split("\n");
+  const out: string[] = [];
+  let i = 0;
+  while (i < lines.length) {
+    if (/^\|/.test(lines[i])) {
+      const tableLines: string[] = [];
+      while (i < lines.length && /^\|/.test(lines[i])) {
+        tableLines.push(lines[i]);
+        i++;
+      }
+      const idx = tables.length;
+      tables.push(buildTableHtml(tableLines));
+      out.push("", `SR_TABLE_${idx}`, "");
+      continue;
+    }
+    out.push(lines[i]);
+    i++;
+  }
+  return out.join("\n");
+}
+
+function buildTableHtml(lines: string[]): string {
+  const rows: string[][] = [];
+  for (const line of lines) {
+    const segs = line.replace(/^\||\|$/g, "").split("|");
+    if (segs.length > 0 && segs.every((s) => /^\s*:?-+:?\s*$/.test(s))) continue;
+    const cells = line.replace(/^\||\|$/g, "").split("|").map((c) => c.trim());
+    rows.push(cells);
+  }
+  if (!rows.length) return "";
+  const headerHtml = `<thead><tr>${rows[0].map((h) => `<th>${h || "&nbsp;"}</th>`).join("")}</tr></thead>`;
+  const bodyHtml = rows.slice(1).length
+    ? `<tbody>${rows
+        .slice(1)
+        .map((r) => `<tr>${r.map((c) => `<td>${c || "&nbsp;"}</td>`).join("")}</tr>`)
+        .join("")}</tbody>`
+    : "";
+  return `<div class="sr-table-wrap"><table class="sr-table">${headerHtml}${bodyHtml}</table></div>`;
+}
+
+function preprocessLists(input: string, lists: string[]): string {
+  const lines = input.split("\n");
+  const out: string[] = [];
+  let i = 0;
+  while (i < lines.length) {
+    const bullet = lines[i].match(/^[-*+]\s+(.*)$/);
+    if (bullet) {
+      const items: string[] = [bullet[1]];
+      i++;
+      while (i < lines.length) {
+        const m = lines[i].match(/^[-*+]\s+(.*)$/);
+        if (!m) break;
+        items.push(m[1]);
+        i++;
+      }
+      const idx = lists.length;
+      lists.push(`<ul>${items.map((it) => `<li>${it}</li>`).join("")}</ul>`);
+      out.push("", `SR_LIST_${idx}`, "");
+      continue;
+    }
+    const num = lines[i].match(/^\d+\.\s+(.*)$/);
+    if (num) {
+      const items: string[] = [num[1]];
+      i++;
+      while (i < lines.length) {
+        const m = lines[i].match(/^\d+\.\s+(.*)$/);
+        if (!m) break;
+        items.push(m[1]);
+        i++;
+      }
+      const idx = lists.length;
+      lists.push(`<ol>${items.map((it) => `<li>${it}</li>`).join("")}</ol>`);
+      out.push("", `SR_LIST_${idx}`, "");
+      continue;
+    }
+    out.push(lines[i]);
+    i++;
+  }
+  return out.join("\n");
 }

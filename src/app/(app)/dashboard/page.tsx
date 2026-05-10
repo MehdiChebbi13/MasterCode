@@ -154,9 +154,9 @@ export default function Dashboard() {
             maxWidth: 900,
           }}
         >
-          Your brain,
+          Consistency,
           <br />
-          on{" "}
+          creates{" "}
           <span
             style={{
               position: "relative",
@@ -168,9 +168,8 @@ export default function Dashboard() {
             className="squiggle-underline"
           >
             {/*  computer&nbsp;science */}
-            steroids
+            excellence
           </span>{" "}
-          🧠
         </h1>
 
         <p

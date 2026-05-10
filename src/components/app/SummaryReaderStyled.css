@@ -1078,3 +1078,128 @@
     display: none;
   }
 }
+
+/* Go-home button at end of page */
+.go-home-section {
+  max-width: 1280px;
+  margin: 0 auto 80px;
+  padding: 0 40px;
+  display: flex;
+  justify-content: center;
+}
+.go-home-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 28px;
+  font-family: "DM Sans", sans-serif;
+  font-weight: 700;
+  font-size: 15px;
+  color: var(--ink);
+  background: var(--paper);
+  border: 2.5px solid var(--ink);
+  border-radius: 14px;
+  box-shadow: var(--shadow);
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.2s ease;
+}
+.go-home-btn:hover {
+  transform: translate(-3px, -3px);
+  box-shadow: 9px 9px 0 var(--ink);
+  background: var(--yellow);
+}
+.go-home-btn:active {
+  transform: translate(1px, 1px);
+  box-shadow: 2px 2px 0 var(--ink);
+}
+
+/* Divider block */
+.styled-markdown .sr-divider {
+  border: none;
+  height: 2.5px;
+  background: var(--ink);
+  opacity: 0.18;
+  border-radius: 2px;
+  margin: 32px 0;
+}
+
+/* Table block */
+.styled-markdown .sr-table-wrap {
+  overflow-x: auto;
+  margin: 28px 0;
+  border: 2.5px solid var(--ink);
+  border-radius: 14px;
+  box-shadow: var(--shadow-sm);
+  background: var(--paper);
+}
+.styled-markdown .sr-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 15px;
+}
+.styled-markdown .sr-table thead {
+  background: var(--cream-deep);
+}
+.styled-markdown .sr-table th {
+  padding: 10px 16px;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-align: left;
+  color: var(--ink);
+  border-bottom: 2px solid var(--ink);
+  border-right: 1px solid rgba(26, 22, 18, 0.15);
+}
+.styled-markdown .sr-table th:last-child {
+  border-right: none;
+}
+.styled-markdown .sr-table td {
+  padding: 9px 16px;
+  color: var(--ink);
+  border-bottom: 1px solid rgba(26, 22, 18, 0.1);
+  border-right: 1px solid rgba(26, 22, 18, 0.08);
+  line-height: 1.5;
+}
+.styled-markdown .sr-table td:last-child {
+  border-right: none;
+}
+.styled-markdown .sr-table tbody tr:last-child td {
+  border-bottom: none;
+}
+.styled-markdown .sr-table tbody tr:hover {
+  background: rgba(26, 22, 18, 0.025);
+}
+
+/* Highlight callout block — emitted by ==text== in markdown */
+.styled-markdown .sr-highlight {
+  background: var(--ds-yellow, #fcc419);
+  border: 2.5px solid var(--ink, #1a1612);
+  border-radius: 14px;
+  padding: 16px 20px;
+  margin: 24px 0;
+  font-family: var(--font-dm-sans, "DM Sans"), sans-serif;
+  font-weight: 600;
+  font-size: 16px;
+  line-height: 1.55;
+  color: var(--ink, #1a1612);
+  box-shadow: 4px 4px 0 var(--ink, #1a1612);
+  transform: rotate(-0.4deg);
+  position: relative;
+}
+.styled-markdown .sr-highlight::before {
+  content: "✦";
+  position: absolute;
+  top: -10px;
+  left: 16px;
+  width: 24px;
+  height: 24px;
+  background: var(--paper, #f7f0e0);
+  border: 2px solid var(--ink, #1a1612);
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ink, #1a1612);
+}

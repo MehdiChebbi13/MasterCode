@@ -51,6 +51,17 @@
     --shadow: 6px 6px 0 var(--ink);
     --shadow-lg: 8px 8px 0 var(--ink);
     --shadow-sm: 3px 3px 0 var(--ink);
+    --shadow-xl: 14px 14px 0 var(--ink);
+
+    /* Extra accents used by the marketing surface */
+    --algo-light: #e3d7ff;
+
+    /* Syntax-highlighting tokens (sandbox preview) */
+    --tok-keyword: #6d3afc;
+    --tok-string: #8b6914;
+    --tok-comment: #8a8275;
+    --tok-number: #c2410c;
+    --tok-fn: #0891b2;
   }
 
   .dark {

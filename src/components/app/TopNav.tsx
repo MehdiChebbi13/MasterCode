@@ -32,7 +32,7 @@ export function TopNav() {
       <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
         {(isDetail || isSandbox) && (
           <Link
-            href="/"
+            href="/dashboard"
             aria-label="Back to dashboard"
             style={{
               display: "inline-flex",
@@ -51,7 +51,7 @@ export function TopNav() {
         )}
 
         <Link
-          href="/"
+          href="/dashboard"
           style={{
             display: "flex",
             alignItems: "center",
@@ -104,7 +104,7 @@ export function TopNav() {
               color: "var(--ink)",
             }}
           >
-            Road2 <span style={{ color: "var(--algo-deep)" }}>FISA</span>
+            CS <span style={{ color: "var(--algo-deep)" }}>Kernel</span>
           </span>
         </Link>
 
@@ -137,7 +137,10 @@ export function TopNav() {
           aria-label="Open sandbox"
           style={{
             textDecoration: "none",
-            ...(isSandbox && { background: "var(--ds-mint)", color: "var(--ink)" }),
+            ...(isSandbox && {
+              background: "var(--ds-mint)",
+              color: "var(--ink)",
+            }),
           }}
         >
           <svg

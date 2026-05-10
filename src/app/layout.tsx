@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
-import { Bricolage_Grotesque, DM_Sans, JetBrains_Mono } from "next/font/google";
+import { Bricolage_Grotesque, DM_Sans, JetBrains_Mono, Fraunces } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
-import { AppShell } from "@/components/app/AppShell";
 
 const bricolage = Bricolage_Grotesque({
   subsets: ["latin"],
@@ -22,18 +21,30 @@ const jetbrainsMono = JetBrains_Mono({
   display: "swap",
 });
 
+const fraunces = Fraunces({
+  subsets: ["latin"],
+  variable: "--font-fraunces",
+  display: "swap",
+  style: ["normal", "italic"],
+});
+
 export const metadata: Metadata = {
-  title: "CS Study Hub",
-  description: "Personal study dashboard for computer science: courses, flashcards, summaries, and a code sandbox.",
+  title: "CS Study Hub — Make CS click.",
+  description:
+    "Flashcards, summaries, and a code sandbox in one place. Built for the way CS majors actually study.",
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${bricolage.variable} ${dmSans.variable} ${jetbrainsMono.variable} font-sans antialiased`}>
-        <Providers>
-          <AppShell>{children}</AppShell>
-        </Providers>
+      <body
+        className={`${bricolage.variable} ${dmSans.variable} ${jetbrainsMono.variable} ${fraunces.variable} font-sans antialiased`}
+      >
+        <Providers>{children}</Providers>
       </body>
     </html>
   );

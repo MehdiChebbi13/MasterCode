@@ -39,7 +39,7 @@ export function CourseHeader({ course }: { course: Course }) {
       >
         {/* Back link */}
         <Link
-          href="/"
+          href="/dashboard"
           style={{
             display: "inline-flex",
             alignItems: "center",
@@ -227,7 +227,7 @@ export function CourseHeader({ course }: { course: Course }) {
         open={deleteOpen}
         onOpenChange={setDeleteOpen}
         course={course}
-        onDeleted={() => router.push("/")}
+        onDeleted={() => router.push("/dashboard")}
       />
     </>
   );

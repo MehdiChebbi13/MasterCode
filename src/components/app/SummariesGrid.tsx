@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import Link from "next/link";
 import { SummaryReader } from "./SummaryReader";
 import type { Summary } from "@/types";
 
@@ -9,16 +10,45 @@ const COLORS = [
   { bg: "var(--sky)", rotate: "0.8deg" },
 ];
 
+const CREATE_BTN_STYLE: React.CSSProperties = {
+  display: "inline-flex",
+  alignItems: "center",
+  gap: 7,
+  padding: "8px 16px",
+  background: "var(--algo)",
+  color: "var(--ink)",
+  border: "2.5px solid var(--ink)",
+  borderRadius: 10,
+  fontFamily: "var(--font-dm-sans), sans-serif",
+  fontWeight: 700,
+  fontSize: 13.5,
+  cursor: "pointer",
+  textDecoration: "none",
+  boxShadow: "3px 3px 0 var(--ink)",
+  transition: "transform 0.12s ease, box-shadow 0.12s ease",
+};
+
 export function SummariesGrid({
   summaries,
+  courseId,
   courseName = "Course",
+  initialReadId,
   onOpenFlashcards,
 }: {
   summaries: Summary[];
+  courseId: string;
   courseName?: string;
+  initialReadId?: string;
   onOpenFlashcards?: () => void;
 }) {
   const [reading, setReading] = useState<Summary | null>(null);
+
+  useEffect(() => {
+    if (!initialReadId || summaries.length === 0) return;
+    const match = summaries.find((s) => s.id === initialReadId);
+    if (match) setReading(match);
+  }, [initialReadId, summaries]);
+  const newHref = `/courses/${courseId}/summaries/new`;
 
   if (summaries.length === 0) {
     return (
@@ -30,9 +60,23 @@ export function SummariesGrid({
           textAlign: "center",
         }}
       >
-        <div style={{ fontSize: 18, color: "var(--ink-soft)" }}>
+        <div style={{ fontSize: 18, color: "var(--ink-soft)", marginBottom: 20 }}>
           No summaries yet. Time to create one!
         </div>
+        <Link
+          href={newHref}
+          style={CREATE_BTN_STYLE}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.transform = "translate(-2px,-2px)";
+            e.currentTarget.style.boxShadow = "5px 5px 0 var(--ink)";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.transform = "none";
+            e.currentTarget.style.boxShadow = "3px 3px 0 var(--ink)";
+          }}
+        >
+          <span style={{ fontSize: 16, lineHeight: 1 }}>+</span> Create summary
+        </Link>
       </section>
     );
   }
@@ -75,14 +119,24 @@ export function SummariesGrid({
             </span>{" "}
             stuff
           </h2>
-          <div
-            style={{
-              fontSize: 13,
-              color: "var(--ink-faint)",
-              display: "inline-flex",
-            }}
-          >
-            Tap any summary to read in full
+          <div style={{ display: "inline-flex", alignItems: "center", gap: 14 }}>
+            <span style={{ fontSize: 13, color: "var(--ink-faint)" }}>
+              Tap any summary to read in full
+            </span>
+            <Link
+              href={newHref}
+              style={CREATE_BTN_STYLE}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = "translate(-2px,-2px)";
+                e.currentTarget.style.boxShadow = "5px 5px 0 var(--ink)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = "none";
+                e.currentTarget.style.boxShadow = "3px 3px 0 var(--ink)";
+              }}
+            >
+              <span style={{ fontSize: 16, lineHeight: 1 }}>+</span> Create summary
+            </Link>
           </div>
         </div>
 
