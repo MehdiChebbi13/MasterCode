@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
+import { UserButton } from "@clerk/nextjs";
 import { useUIStore } from "@/store/uiStore";
 import { dataSource } from "@/services";
 import { ThemeToggle } from "./ThemeToggle";
@@ -173,6 +174,7 @@ export function TopNav() {
           </svg>
           <span>Add course</span>
         </button>
+        <UserButton afterSignOutUrl="/" />
       </div>
     </header>
   );

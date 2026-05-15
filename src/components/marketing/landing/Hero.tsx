@@ -1,10 +1,8 @@
 "use client";
 
-export function Hero({
-  onOpen,
-}: {
-  onOpen: (mode: "signup" | "login") => void;
-}) {
+import Link from "next/link";
+
+export function Hero() {
   return (
     <section className="mkt-hero">
       <div>
@@ -20,10 +18,9 @@ export function Hero({
           days before the final.
         </p>
         <div className="mkt-hero-cta">
-          <button
-            type="button"
+          <Link
+            href="/sign-up"
             className="mkt-btn mkt-btn-primary mkt-btn-lg"
-            onClick={() => onOpen("signup")}
           >
             Get started — it&apos;s free
             <svg
@@ -39,7 +36,7 @@ export function Hero({
               <line x1="5" y1="12" x2="19" y2="12" />
               <polyline points="12 5 19 12 12 19" />
             </svg>
-          </button>
+          </Link>
           <button
             type="button"
             className="mkt-btn mkt-btn-yellow mkt-btn-lg"

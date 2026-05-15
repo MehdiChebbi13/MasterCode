@@ -36,6 +36,7 @@ export class MockSummariesService implements SummariesService {
         contentMarkdown: input.contentMarkdown,
         createdAt: nowIso(),
         updatedAt: nowIso(),
+        recallCards: input.recallCards ?? [],
       };
       mockStore.summaries = [summary, ...mockStore.summaries];
       return { ...summary };

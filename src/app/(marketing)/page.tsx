@@ -1,6 +1,3 @@
-"use client";
-
-import { useState } from "react";
 import { MarketingNav } from "@/components/marketing/landing/MarketingNav";
 import { Hero } from "@/components/marketing/landing/Hero";
 import { TrustBar } from "@/components/marketing/landing/TrustBar";
@@ -11,31 +8,20 @@ import { FreeBanner } from "@/components/marketing/landing/FreeBanner";
 import { FinalCTA } from "@/components/marketing/landing/FinalCTA";
 import { MarketingFooter } from "@/components/marketing/landing/MarketingFooter";
 import { Decorations } from "@/components/marketing/landing/Decorations";
-import { SignInModal } from "@/components/marketing/SignInModal";
 
 export default function LandingPage() {
-  const [modal, setModal] = useState<{
-    open: boolean;
-    mode: "signup" | "login";
-  }>({ open: false, mode: "signup" });
-
-  const open = (mode: "signup" | "login") => setModal({ open: true, mode });
-  const close = () => setModal((m) => ({ ...m, open: false }));
-
   return (
     <div id="top">
       <Decorations />
-      <MarketingNav onOpen={open} />
-      <Hero onOpen={open} />
+      <MarketingNav />
+      <Hero />
       <TrustBar />
       <Features />
       <HowItWorks />
       <Testimonials />
       <FreeBanner />
-      <FinalCTA onOpen={open} />
+      <FinalCTA />
       <MarketingFooter />
-
-      <SignInModal open={modal.open} mode={modal.mode} onClose={close} />
     </div>
   );
 }

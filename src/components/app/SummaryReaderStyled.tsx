@@ -2,10 +2,30 @@
 
 import { useEffect, useRef, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Home, Pencil, Trash2, X } from "lucide-react";
+import {
+  ArrowLeft,
+  Home,
+  Loader2,
+  Pencil,
+  Sparkles,
+  Trash2,
+  X,
+} from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import type { Summary } from "@/types";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import type { RecallCard, Summary } from "@/types";
 import { formatRelativeTime } from "@/lib/format";
+import { makeBlockId } from "@/lib/summaryBlocks";
+import { useGenerateFlashcards } from "@/hooks/useGenerateFlashcards";
+import { useSummary, useUpdateSummary } from "@/hooks/useSummaries";
 import { ExplainPopover } from "./ExplainPopover";
 import { DeleteSummaryConfirm } from "./DeleteSummaryConfirm";
 import "./SummaryReaderStyled.css";
@@ -23,20 +43,28 @@ interface SummaryReaderStyledProps {
 export function SummaryReaderStyled({
   open,
   onOpenChange,
-  summary,
+  summary: summaryProp,
   courseName = "Course",
   allSummaries = [],
   onNavigate,
   onOpenFlashcards,
 }: SummaryReaderStyledProps) {
   const router = useRouter();
+  // Subscribe to the live summary from the query cache so updates
+  // (e.g. newly generated recall cards) re-render the reader.
+  const liveQuery = useSummary(summaryProp?.id);
+  const summary = liveQuery.data ?? summaryProp;
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [readPercent, setReadPercent] = useState(0);
   const [activeSection, setActiveSection] = useState<string>("section-0");
   const [markedState, setMarkedState] = useState<"yes" | "no" | null>(null);
 
-  // Flip states for the mock Quick Recall cards
-  const [flippedCards, setFlippedCards] = useState<Record<number, boolean>>({});
+  // Flip states keyed by RecallCard id
+  const [flippedCards, setFlippedCards] = useState<Record<string, boolean>>({});
+  const [insufficientOpen, setInsufficientOpen] = useState(false);
+
+  const generate = useGenerateFlashcards();
+  const updateSummary = useUpdateSummary();
 
   const articleRef = useRef<HTMLDivElement | null>(null);
   const wrapperRef = useRef<HTMLDivElement | null>(null);
@@ -46,9 +74,14 @@ export function SummaryReaderStyled({
     () => [...allSummaries].sort((a, b) => a.chapter - b.chapter),
     [allSummaries],
   );
-  const currentIdx = summary ? sorted.findIndex((s) => s.id === summary.id) : -1;
+  const currentIdx = summary
+    ? sorted.findIndex((s) => s.id === summary.id)
+    : -1;
   const prevSummary = currentIdx > 0 ? sorted[currentIdx - 1] : null;
-  const nextSummary = currentIdx !== -1 && currentIdx < sorted.length - 1 ? sorted[currentIdx + 1] : null;
+  const nextSummary =
+    currentIdx !== -1 && currentIdx < sorted.length - 1
+      ? sorted[currentIdx + 1]
+      : null;
 
   const handleNavigate = (target: Summary) => {
     if (wrapperRef.current) wrapperRef.current.scrollTop = 0;
@@ -77,7 +110,10 @@ export function SummaryReaderStyled({
     if (!el) return;
     const handleScroll = () => {
       const scrollable = el.scrollHeight - el.clientHeight;
-      const pct = scrollable > 0 ? Math.min(100, Math.max(0, (el.scrollTop / scrollable) * 100)) : 0;
+      const pct =
+        scrollable > 0
+          ? Math.min(100, Math.max(0, (el.scrollTop / scrollable) * 100))
+          : 0;
       setReadPercent(Math.round(pct));
     };
     el.addEventListener("scroll", handleScroll, { passive: true });
@@ -108,8 +144,43 @@ export function SummaryReaderStyled({
     return () => observer.disconnect();
   }, [open, summary?.contentMarkdown]);
 
-  const toggleFlip = (id: number) => {
+  const toggleFlip = (id: string) => {
     setFlippedCards((prev) => ({ ...prev, [id]: !prev[id] }));
+  };
+
+  const recallCards: RecallCard[] = summary?.recallCards ?? [];
+  const isGenerating = generate.isPending || updateSummary.isPending;
+
+  const handleGenerate = async () => {
+    if (!summary || isGenerating) return;
+    try {
+      const res = await generate.mutateAsync({
+        contentMarkdown: summary.contentMarkdown,
+        existingFlashcards: recallCards.map((c) => ({
+          question: c.question,
+          answer: c.answer,
+        })),
+      });
+      if (res.insufficient || res.flashcards.length === 0) {
+        setInsufficientOpen(true);
+        return;
+      }
+      const now = new Date().toISOString();
+      const newCards: RecallCard[] = res.flashcards.map((c) => ({
+        id: makeBlockId(),
+        question: c.question,
+        answer: c.answer,
+        createdAt: now,
+      }));
+      await updateSummary.mutateAsync({
+        id: summary.id,
+        patch: { recallCards: [...recallCards, ...newCards] },
+      });
+    } catch (err) {
+      const msg =
+        err instanceof Error ? err.message : "Failed to generate flashcards";
+      toast.error(msg);
+    }
   };
 
   if (!open || !summary) return null;
@@ -132,7 +203,12 @@ export function SummaryReaderStyled({
   );
 
   return (
-    <div role="dialog" aria-modal="true" className="styled-summary-wrapper" ref={wrapperRef}>
+    <div
+      role="dialog"
+      aria-modal="true"
+      className="styled-summary-wrapper"
+      ref={wrapperRef}
+    >
       {/* Reading progress bar */}
       <div className="progress-bar">
         <div className="progress-fill" style={{ width: `${readPercent}%` }} />
@@ -192,7 +268,7 @@ export function SummaryReaderStyled({
             </svg>
           </div>
           <div className="logo-text">
-            Road2 <span className="accent">FISA</span>
+            CS<span className="accent">Kernel</span>
           </div>
         </div>
         <div className="nav-actions">
@@ -218,7 +294,9 @@ export function SummaryReaderStyled({
             className="gap-1.5 border-[2.5px] border-black shadow-[3px_3px_0_black] rounded-[10px] hover:translate-y-[-2px] hover:translate-x-[-2px] hover:shadow-[5px_5px_0_black] transition-all"
             onClick={() => {
               onOpenChange(false);
-              router.push(`/courses/${summary.courseId}/summaries/${summary.id}/edit`);
+              router.push(
+                `/courses/${summary.courseId}/summaries/${summary.id}/edit`,
+              );
             }}
           >
             <Pencil className="size-3.5" />
@@ -376,46 +454,75 @@ export function SummaryReaderStyled({
             dangerouslySetInnerHTML={{ __html: htmlContent }}
           />
 
-          {/* Quick Recall Section (Mocked matching design) */}
+          {/* Quick Recall Section — AI generated */}
           <section className="section" id="quick-recall">
             <div className="recall-section">
               <div className="recall-head">
                 <h2>
                   Quick <span className="em">recall</span> 🧠
                 </h2>
-                <span className="small">
-                  Tap a card to flip · review core concepts
-                </span>
-              </div>
-              <div className="recall-cards">
-                {[1, 2, 3].map((num) => (
-                  <div
-                    key={num}
-                    className={`recall-card ${flippedCards[num] ? "flipped" : ""}`}
-                    onClick={() => toggleFlip(num)}
+                <div className="recall-head-right">
+                  <span className="small">
+                    {recallCards.length > 0
+                      ? "Tap a card to flip · review core concepts"
+                      : "AI-generated flashcards from this summary"}
+                  </span>
+                  <button
+                    type="button"
+                    className="recall-generate-btn"
+                    onClick={handleGenerate}
+                    disabled={isGenerating}
                   >
-                    <div className="recall-card-inner">
-                      <div className="recall-face front">
-                        <div className="label">
-                          <span className="dot"></span> Question
+                    {isGenerating ? (
+                      <>
+                        <Loader2 className="size-3.5 animate-spin" />
+                        Generating…
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="size-3.5" />
+                        Generate flashcards
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              {recallCards.length === 0 ? (
+                <div className="recall-empty">
+                  <p>
+                    No flashcards yet. Tap <strong>Generate flashcards</strong>{" "}
+                    to let AI distill the key concepts from this summary.
+                  </p>
+                </div>
+              ) : (
+                <div className="recall-cards">
+                  {recallCards.map((card) => (
+                    <div
+                      key={card.id}
+                      className={`recall-card ${flippedCards[card.id] ? "flipped" : ""}`}
+                      onClick={() => toggleFlip(card.id)}
+                    >
+                      <div className="recall-card-inner">
+                        <div className="recall-face front">
+                          <div className="label">
+                            <span className="dot"></span> Question
+                          </div>
+                          <div className="q">{card.question}</div>
+                          <div className="recall-flip-hint">↻ flip</div>
                         </div>
-                        <div className="q">Key concept question #{num}?</div>
-                        <div className="recall-flip-hint">↻ flip</div>
-                      </div>
-                      <div className="recall-face back">
-                        <div className="label">
-                          <span className="dot"></span> Answer
+                        <div className="recall-face back">
+                          <div className="label">
+                            <span className="dot"></span> Answer
+                          </div>
+                          <div className="a">{card.answer}</div>
+                          <div className="recall-flip-hint">↻ back</div>
                         </div>
-                        <div className="a">
-                          This is the back of the card, revealing the crucial
-                          detail you need to remember.
-                        </div>
-                        <div className="recall-flip-hint">↻ back</div>
                       </div>
                     </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </div>
           </section>
 
@@ -461,9 +568,15 @@ export function SummaryReaderStyled({
             onClick={() => handleNavigate(prevSummary)}
             style={{ cursor: "pointer" }}
           >
-            <span className="nav-label">← Previous · § {String(prevSummary.chapter).padStart(2, "0")}</span>
+            <span className="nav-label">
+              ← Previous · § {String(prevSummary.chapter).padStart(2, "0")}
+            </span>
             <span className="nav-title">{prevSummary.title}</span>
-            <span className="nav-meta">⏱ {Math.ceil(prevSummary.contentMarkdown.split(/\s+/).length / 200)} min</span>
+            <span className="nav-meta">
+              ⏱{" "}
+              {Math.ceil(prevSummary.contentMarkdown.split(/\s+/).length / 200)}{" "}
+              min
+            </span>
           </a>
         ) : (
           <a className="nav-card prev disabled">
@@ -479,9 +592,15 @@ export function SummaryReaderStyled({
             onClick={() => handleNavigate(nextSummary)}
             style={{ cursor: "pointer" }}
           >
-            <span className="nav-label">Next · § {String(nextSummary.chapter).padStart(2, "0")} →</span>
+            <span className="nav-label">
+              Next · § {String(nextSummary.chapter).padStart(2, "0")} →
+            </span>
             <span className="nav-title">{nextSummary.title}</span>
-            <span className="nav-meta">⏱ {Math.ceil(nextSummary.contentMarkdown.split(/\s+/).length / 200)} min</span>
+            <span className="nav-meta">
+              ⏱{" "}
+              {Math.ceil(nextSummary.contentMarkdown.split(/\s+/).length / 200)}{" "}
+              min
+            </span>
           </a>
         ) : (
           <a className="nav-card next disabled">
@@ -499,13 +618,14 @@ export function SummaryReaderStyled({
             <h3>
               Ready to <span className="em">drill</span> these concepts?
             </h3>
-            <p>
-              Switch to flashcards to cement your knowledge.
-            </p>
+            <p>Switch to flashcards to cement your knowledge.</p>
           </div>
           <button
             className="cta-btn"
-            onClick={() => { onOpenChange(false); onOpenFlashcards?.(); }}
+            onClick={() => {
+              onOpenChange(false);
+              onOpenFlashcards?.();
+            }}
           >
             🃏 Open flashcards
             <svg
@@ -530,7 +650,10 @@ export function SummaryReaderStyled({
         <button
           type="button"
           className="go-home-btn"
-          onClick={() => { onOpenChange(false); router.push("/dashboard"); }}
+          onClick={() => {
+            onOpenChange(false);
+            router.push("/dashboard");
+          }}
         >
           <Home className="size-4" />
           Go to dashboard
@@ -548,97 +671,307 @@ export function SummaryReaderStyled({
         summary={summary}
         onDeleted={() => onOpenChange(false)}
       />
+
+      <Dialog open={insufficientOpen} onOpenChange={setInsufficientOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Not enough information</DialogTitle>
+            <DialogDescription>
+              Not enough information to generate flashcards.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button onClick={() => setInsufficientOpen(false)}>OK</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
 
 // ── Syntax highlighting (mirrors SandboxPage tokeniser) ──────────────────────
-const _javaKw = new Set(["public","private","protected","static","final","void","class","interface","extends","implements","import","package","new","return","if","else","for","while","do","switch","case","break","continue","try","catch","finally","throw","throws","this","super","null","true","false","abstract","enum","instanceof"]);
-const _javaTy = new Set(["int","long","short","byte","double","float","char","boolean","String","Object","Integer","Long","Boolean","Character","Double","Float","Arrays","List","Map","HashMap","ArrayList","System"]);
-const _pyKw   = new Set(["def","return","if","else","elif","for","while","in","not","and","or","import","from","as","class","pass","break","continue","try","except","finally","raise","with","lambda","yield","global","nonlocal","None","True","False","is","async","await"]);
-const _pyBi   = new Set(["print","len","range","int","str","float","bool","list","dict","set","tuple","enumerate","zip","map","filter","sorted","reversed","sum","min","max","abs","round","open","input","type","isinstance"]);
+const _javaKw = new Set([
+  "public",
+  "private",
+  "protected",
+  "static",
+  "final",
+  "void",
+  "class",
+  "interface",
+  "extends",
+  "implements",
+  "import",
+  "package",
+  "new",
+  "return",
+  "if",
+  "else",
+  "for",
+  "while",
+  "do",
+  "switch",
+  "case",
+  "break",
+  "continue",
+  "try",
+  "catch",
+  "finally",
+  "throw",
+  "throws",
+  "this",
+  "super",
+  "null",
+  "true",
+  "false",
+  "abstract",
+  "enum",
+  "instanceof",
+]);
+const _javaTy = new Set([
+  "int",
+  "long",
+  "short",
+  "byte",
+  "double",
+  "float",
+  "char",
+  "boolean",
+  "String",
+  "Object",
+  "Integer",
+  "Long",
+  "Boolean",
+  "Character",
+  "Double",
+  "Float",
+  "Arrays",
+  "List",
+  "Map",
+  "HashMap",
+  "ArrayList",
+  "System",
+]);
+const _pyKw = new Set([
+  "def",
+  "return",
+  "if",
+  "else",
+  "elif",
+  "for",
+  "while",
+  "in",
+  "not",
+  "and",
+  "or",
+  "import",
+  "from",
+  "as",
+  "class",
+  "pass",
+  "break",
+  "continue",
+  "try",
+  "except",
+  "finally",
+  "raise",
+  "with",
+  "lambda",
+  "yield",
+  "global",
+  "nonlocal",
+  "None",
+  "True",
+  "False",
+  "is",
+  "async",
+  "await",
+]);
+const _pyBi = new Set([
+  "print",
+  "len",
+  "range",
+  "int",
+  "str",
+  "float",
+  "bool",
+  "list",
+  "dict",
+  "set",
+  "tuple",
+  "enumerate",
+  "zip",
+  "map",
+  "filter",
+  "sorted",
+  "reversed",
+  "sum",
+  "min",
+  "max",
+  "abs",
+  "round",
+  "open",
+  "input",
+  "type",
+  "isinstance",
+]);
 
-function _esc(s: string) { return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+function _esc(s: string) {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
 
 function _highlight(code: string, lang: string): string {
   type Tok = { type: string; val: string };
   const toks: Tok[] = [];
-  let i = 0; const len = code.length;
+  let i = 0;
+  const len = code.length;
   while (i < len) {
-    const ch = code[i], nx = code[i+1];
-    if ((lang==="java" && ch==="/" && nx==="/") || (lang==="python" && ch==="#")) {
-      let e = code.indexOf("\n",i); if(e===-1) e=len;
-      toks.push({type:"comment",val:code.slice(i,e)}); i=e; continue;
+    const ch = code[i],
+      nx = code[i + 1];
+    if (
+      (lang === "java" && ch === "/" && nx === "/") ||
+      (lang === "python" && ch === "#")
+    ) {
+      let e = code.indexOf("\n", i);
+      if (e === -1) e = len;
+      toks.push({ type: "comment", val: code.slice(i, e) });
+      i = e;
+      continue;
     }
-    if (lang==="java" && ch==="/" && nx==="*") {
-      let e=code.indexOf("*/",i+2); if(e===-1) e=len; else e+=2;
-      toks.push({type:"comment",val:code.slice(i,e)}); i=e; continue;
+    if (lang === "java" && ch === "/" && nx === "*") {
+      let e = code.indexOf("*/", i + 2);
+      if (e === -1) e = len;
+      else e += 2;
+      toks.push({ type: "comment", val: code.slice(i, e) });
+      i = e;
+      continue;
     }
-    if (lang==="python" && (code.startsWith('"""',i)||code.startsWith("'''",i))) {
-      const q=code.slice(i,i+3); let e=code.indexOf(q,i+3); if(e===-1)e=len; else e+=3;
-      toks.push({type:"string",val:code.slice(i,e)}); i=e; continue;
+    if (
+      lang === "python" &&
+      (code.startsWith('"""', i) || code.startsWith("'''", i))
+    ) {
+      const q = code.slice(i, i + 3);
+      let e = code.indexOf(q, i + 3);
+      if (e === -1) e = len;
+      else e += 3;
+      toks.push({ type: "string", val: code.slice(i, e) });
+      i = e;
+      continue;
     }
-    if (ch==='"'||ch==="'") {
-      let j=i+1, st=i;
-      if(lang==="python"&&i>0&&/[fr]/i.test(code[i-1])&&toks.length){
-        const last=toks[toks.length-1];
-        if(last.type==="plain"&&/[fr]$/i.test(last.val)){last.val=last.val.slice(0,-1);st=i-1;}
+    if (ch === '"' || ch === "'") {
+      let j = i + 1,
+        st = i;
+      if (
+        lang === "python" &&
+        i > 0 &&
+        /[fr]/i.test(code[i - 1]) &&
+        toks.length
+      ) {
+        const last = toks[toks.length - 1];
+        if (last.type === "plain" && /[fr]$/i.test(last.val)) {
+          last.val = last.val.slice(0, -1);
+          st = i - 1;
+        }
       }
-      while(j<len&&code[j]!==ch){if(code[j]==="\\")j+=2;else j++;}
-      if(j<len)j++;
-      toks.push({type:"string",val:code.slice(st,j)}); i=j; continue;
+      while (j < len && code[j] !== ch) {
+        if (code[j] === "\\") j += 2;
+        else j++;
+      }
+      if (j < len) j++;
+      toks.push({ type: "string", val: code.slice(st, j) });
+      i = j;
+      continue;
     }
-    if(/[0-9]/.test(ch)){
-      let k=i; while(k<len&&/[0-9.]/.test(code[k]))k++;
-      toks.push({type:"number",val:code.slice(i,k)}); i=k; continue;
+    if (/[0-9]/.test(ch)) {
+      let k = i;
+      while (k < len && /[0-9.]/.test(code[k])) k++;
+      toks.push({ type: "number", val: code.slice(i, k) });
+      i = k;
+      continue;
     }
-    if(/[a-zA-Z_$]/.test(ch)){
-      let j=i; while(j<len&&/[a-zA-Z0-9_$]/.test(code[j]))j++;
-      const w=code.slice(i,j); let t="plain";
-      if(lang==="java"){if(_javaKw.has(w))t="keyword";else if(_javaTy.has(w))t="type";else if(code[j]==="(")t="fn";}
-      else{if(_pyKw.has(w))t="keyword";else if(_pyBi.has(w))t="builtin";else if(code[j]==="(")t="fn";}
-      toks.push({type:t,val:w}); i=j; continue;
+    if (/[a-zA-Z_$]/.test(ch)) {
+      let j = i;
+      while (j < len && /[a-zA-Z0-9_$]/.test(code[j])) j++;
+      const w = code.slice(i, j);
+      let t = "plain";
+      if (lang === "java") {
+        if (_javaKw.has(w)) t = "keyword";
+        else if (_javaTy.has(w)) t = "type";
+        else if (code[j] === "(") t = "fn";
+      } else {
+        if (_pyKw.has(w)) t = "keyword";
+        else if (_pyBi.has(w)) t = "builtin";
+        else if (code[j] === "(") t = "fn";
+      }
+      toks.push({ type: t, val: w });
+      i = j;
+      continue;
     }
-    toks.push({type:"plain",val:ch}); i++;
+    toks.push({ type: "plain", val: ch });
+    i++;
   }
-  return toks.map(t=>{
-    const s=_esc(t.val);
-    switch(t.type){
-      case"keyword": return`<span class="sr-tok-kw">${s}</span>`;
-      case"string":  return`<span class="sr-tok-str">${s}</span>`;
-      case"comment": return`<span class="sr-tok-cmt">${s}</span>`;
-      case"number":  return`<span class="sr-tok-num">${s}</span>`;
-      case"fn":      return`<span class="sr-tok-fn">${s}</span>`;
-      case"type":    return`<span class="sr-tok-ty">${s}</span>`;
-      case"builtin": return`<span class="sr-tok-fn">${s}</span>`;
-      default:       return s;
-    }
-  }).join("");
+  return toks
+    .map((t) => {
+      const s = _esc(t.val);
+      switch (t.type) {
+        case "keyword":
+          return `<span class="sr-tok-kw">${s}</span>`;
+        case "string":
+          return `<span class="sr-tok-str">${s}</span>`;
+        case "comment":
+          return `<span class="sr-tok-cmt">${s}</span>`;
+        case "number":
+          return `<span class="sr-tok-num">${s}</span>`;
+        case "fn":
+          return `<span class="sr-tok-fn">${s}</span>`;
+        case "type":
+          return `<span class="sr-tok-ty">${s}</span>`;
+        case "builtin":
+          return `<span class="sr-tok-fn">${s}</span>`;
+        default:
+          return s;
+      }
+    })
+    .join("");
 }
 
 function _buildCodePanel(lang: string | undefined, code: string): string {
   const l = (lang || "code").toLowerCase();
-  const dotCls = l==="java" ? "sr-dot-java" : l==="python" ? "sr-dot-py" : "sr-dot-generic";
+  const dotCls =
+    l === "java"
+      ? "sr-dot-java"
+      : l === "python"
+        ? "sr-dot-py"
+        : "sr-dot-generic";
   const lines = code.split("\n");
-  const gutter = lines.map((_,i)=>`<span>${i+1}</span>`).join("");
-  const highlighted = (l==="java"||l==="python") ? _highlight(code, l) : _esc(code);
+  const gutter = lines.map((_, i) => `<span>${i + 1}</span>`).join("");
+  const highlighted =
+    l === "java" || l === "python" ? _highlight(code, l) : _esc(code);
   return (
     `<div class="sr-code-panel">` +
-      `<div class="sr-code-header">` +
-        `<div class="sr-code-tab"><span class="sr-lang-dot ${dotCls}"></span><span>${_esc(l)}</span></div>` +
-        `<div class="sr-traffic"><span class="r"></span><span class="y"></span><span class="g"></span></div>` +
-      `</div>` +
-      `<div class="sr-code-body">` +
-        `<div class="sr-code-grid">` +
-          `<div class="sr-gutter">${gutter}</div>` +
-          `<pre class="sr-pre"><code>${highlighted}</code></pre>` +
-        `</div>` +
-      `</div>` +
+    `<div class="sr-code-header">` +
+    `<div class="sr-code-tab"><span class="sr-lang-dot ${dotCls}"></span><span>${_esc(l)}</span></div>` +
+    `<div class="sr-traffic"><span class="r"></span><span class="y"></span><span class="g"></span></div>` +
+    `</div>` +
+    `<div class="sr-code-body">` +
+    `<div class="sr-code-grid">` +
+    `<div class="sr-gutter">${gutter}</div>` +
+    `<pre class="sr-pre"><code>${highlighted}</code></pre>` +
+    `</div>` +
+    `</div>` +
     `</div>`
   );
 }
 
 // ── Markdown formatter ────────────────────────────────────────────────────────
+function inlineFormat(s: string): string {
+  return s
+    .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+    .replace(/\*(.+?)\*/g, "<em>$1</em>")
+    .replace(/`([^`]+)`/g, "<code>$1</code>")
+    .replace(/\[(.+?)\]\((.+?)\)/g, '<a href="$2">$1</a>');
+}
+
 function formatMarkdown(md: string): string {
   // 1. Protect fenced code blocks from paragraph processing
   const blocks: string[] = [];
@@ -652,7 +985,7 @@ function formatMarkdown(md: string): string {
   const highlights: string[] = [];
   safe = safe.replace(/^==(.+)==\s*$/gm, (_, text) => {
     const idx = highlights.length;
-    highlights.push(`<div class="sr-highlight">${text}</div>`);
+    highlights.push(`<div class="sr-highlight">${inlineFormat(text)}</div>`);
     return `\n\nSR_HIGHLIGHT_${idx}\n\n`;
   });
 
@@ -677,14 +1010,17 @@ function formatMarkdown(md: string): string {
   let html = safe
     .replace(/^##\s+(.+)$/gm, (_, title) => {
       const idx = h2Count++;
-      return `<h2 id="section-${idx}"><span class="num">${String(idx+1).padStart(2,"0")}</span>${title}</h2>`;
+      return `<h2 id="section-${idx}"><span class="num">${String(idx + 1).padStart(2, "0")}</span>${title}</h2>`;
     })
     .replace(/^###\s+(.+)$/gm, "<h3>$1</h3>")
-    .replace(/^#\s+(.+)$/gm,   "<h1>$1</h1>")
-    .replace(/^>\s+(.+)$/gm, '<div class="pullquote"><div class="body">$1</div></div>')
+    .replace(/^#\s+(.+)$/gm, "<h1>$1</h1>")
+    .replace(
+      /^>\s+(.+)$/gm,
+      '<div class="pullquote"><div class="body">$1</div></div>',
+    )
     .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
-    .replace(/\*(.+?)\*/g,     "<em>$1</em>")
-    .replace(/`([^`]+)`/g,     "<code>$1</code>")
+    .replace(/\*(.+?)\*/g, "<em>$1</em>")
+    .replace(/`([^`]+)`/g, "<code>$1</code>")
     .replace(/\[(.+?)\]\((.+?)\)/g, '<a href="$2">$1</a>')
     .replace(/\n\n+/g, "</p><p>")
     .replace(/\n/g, "<br />");
@@ -732,16 +1068,27 @@ function buildTableHtml(lines: string[]): string {
   const rows: string[][] = [];
   for (const line of lines) {
     const segs = line.replace(/^\||\|$/g, "").split("|");
-    if (segs.length > 0 && segs.every((s) => /^\s*:?-+:?\s*$/.test(s))) continue;
-    const cells = line.replace(/^\||\|$/g, "").split("|").map((c) => c.trim());
+    if (segs.length > 0 && segs.every((s) => /^\s*:?-+:?\s*$/.test(s)))
+      continue;
+    const cells = line
+      .replace(/^\||\|$/g, "")
+      .split("|")
+      .map((c) => c.trim());
     rows.push(cells);
   }
   if (!rows.length) return "";
-  const headerHtml = `<thead><tr>${rows[0].map((h) => `<th>${h || "&nbsp;"}</th>`).join("")}</tr></thead>`;
+  const headerHtml = `<thead><tr>${rows[0]
+    .map((h) => `<th>${h ? inlineFormat(h) : "&nbsp;"}</th>`)
+    .join("")}</tr></thead>`;
   const bodyHtml = rows.slice(1).length
     ? `<tbody>${rows
         .slice(1)
-        .map((r) => `<tr>${r.map((c) => `<td>${c || "&nbsp;"}</td>`).join("")}</tr>`)
+        .map(
+          (r) =>
+            `<tr>${r
+              .map((c) => `<td>${c ? inlineFormat(c) : "&nbsp;"}</td>`)
+              .join("")}</tr>`,
+        )
         .join("")}</tbody>`
     : "";
   return `<div class="sr-table-wrap"><table class="sr-table">${headerHtml}${bodyHtml}</table></div>`;
@@ -763,7 +1110,9 @@ function preprocessLists(input: string, lists: string[]): string {
         i++;
       }
       const idx = lists.length;
-      lists.push(`<ul>${items.map((it) => `<li>${it}</li>`).join("")}</ul>`);
+      lists.push(
+        `<ul>${items.map((it) => `<li>${inlineFormat(it)}</li>`).join("")}</ul>`,
+      );
       out.push("", `SR_LIST_${idx}`, "");
       continue;
     }
@@ -778,7 +1127,9 @@ function preprocessLists(input: string, lists: string[]): string {
         i++;
       }
       const idx = lists.length;
-      lists.push(`<ol>${items.map((it) => `<li>${it}</li>`).join("")}</ol>`);
+      lists.push(
+        `<ol>${items.map((it) => `<li>${inlineFormat(it)}</li>`).join("")}</ol>`,
+      );
       out.push("", `SR_LIST_${idx}`, "");
       continue;
     }

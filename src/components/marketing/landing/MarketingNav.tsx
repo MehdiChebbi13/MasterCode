@@ -1,12 +1,7 @@
-"use client";
-
+import Link from "next/link";
 import { LogoMark } from "./LogoMark";
 
-export function MarketingNav({
-  onOpen,
-}: {
-  onOpen: (mode: "signup" | "login") => void;
-}) {
+export function MarketingNav() {
   return (
     <header className="mkt-nav">
       <a href="#top" className="mkt-logo">
@@ -19,20 +14,12 @@ export function MarketingNav({
         <a href="#free">Pricing</a>
       </nav>
       <div className="mkt-nav-actions">
-        <button
-          type="button"
-          className="mkt-nav-link-btn"
-          onClick={() => onOpen("login")}
-        >
+        <Link href="/sign-in" className="mkt-nav-link-btn">
           Sign in
-        </button>
-        <button
-          type="button"
-          className="mkt-btn mkt-btn-primary"
-          onClick={() => onOpen("signup")}
-        >
+        </Link>
+        <Link href="/sign-up" className="mkt-btn mkt-btn-primary">
           Get started — free
-        </button>
+        </Link>
       </div>
     </header>
   );

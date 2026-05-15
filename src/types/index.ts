@@ -28,6 +28,13 @@ export interface ReviewHistoryEntry {
   difficulty: 1 | 2 | 3 | 4;
 }
 
+export interface RecallCard {
+  id: string;
+  question: string;
+  answer: string;
+  createdAt: string;
+}
+
 export interface Summary {
   id: string;
   courseId: string;
@@ -36,6 +43,7 @@ export interface Summary {
   contentMarkdown: string;
   createdAt: string;
   updatedAt: string;
+  recallCards?: RecallCard[];
 }
 
 export type ExplainMode = "summary" | "code";

@@ -10,7 +10,10 @@ class MockStore {
   constructor() {
     this.courses = SEED_COURSES.map((c) => ({ ...c }));
     this.flashcards = SEED_FLASHCARDS.map((f) => ({ ...f, tags: [...f.tags], reviewHistory: f.reviewHistory.map((r) => ({ ...r })) }));
-    this.summaries = SEED_SUMMARIES.map((s) => ({ ...s }));
+    this.summaries = SEED_SUMMARIES.map((s) => ({
+      ...s,
+      recallCards: s.recallCards ? s.recallCards.map((c) => ({ ...c })) : [],
+    }));
     this.sandboxes = new Map();
   }
 }
